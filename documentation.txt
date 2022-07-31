@@ -1,0 +1,111 @@
+This is a react app with a django backend communicating through
+django-rest-api.
+The business logic is done through views, with Note object as db model.
+
+A serializer is a way to make the python model objects (Note) understandable
+as a json object for use by react and https requests.
+
+Urls.py are different endpoints for the api, not a render_page.
+
+Django-cors-headers is a framework to deal with the cors origin problems between
+a react server at port 3000 and a django server at port 8000, makes communication
+possible.
+
+STEPS LEFT:
+- fix os_env
+- deploy on netlify
+- make a readme
+- add user auth
+
+
+Vscode has the following extensions to make react coding easier:
+1. Auto rename tag (for html, auto renames closing tag
+2. ES7+ react /redux - for shortcuts for different commonly used react code patterns.
+3. Prettier - auto formats and cleans code.
+
+
+
+REACT
+- Need to install npm install react-router-dom to handle page routes in react.
+    - So that when the react app goes live you can use
+        await fetch('http://127.0.0.1:8000/api/notes/') with only ('/api/notes/')
+    - also the localhost is not available anymore in live
+    - Go to package_json and set up a proxy url by adding "proxy": "http://127.0.0.1:8000/"
+    - add
+        import {
+          BrowserRouter,
+          Routes,
+          Route,
+        } from "react-router-dom";
+        - on app.js
+
+Deploying on django the react frontend
+- NB!!!!!!! Everytime you make a change on the react frontend, you have to rebuild it to render it correctly on django
+- copy the frontend to notesapp
+- npm run build on frontend to integrate the current build to django
+- set templates on settings.py as 'DIRS': [BASE_DIR / 'frontend/build']
+- STATICFILES_DIRS = [
+    BASE_DIR / 'frontend/build/static' #We link up the react static files to django
+    ]
+- on base app urls.py: from django.views.generic import TemplateView
+    - path('', TemplateView.as_view(template_name='index.html')) #This is the react build index.html
+    - let react handle the rest of the urls on its app and django to handle the apis.
+
+
+The url problem between react and django
+- Because react app handles the routing and django has no registered urls for example a note/17
+    - Refreshing the page gives an error
+    - Because django cant load the page and throws an error before react app can handle the url request.
+    - A possible fix for this is to use a Hashrouter on react instead of browser.
+        - lets django know as long there is a # symbol on the url, react handles it. Removes incompatiblity and url conflicts.
+        - Looks ugly with a hash on the link but it works and makes the routing between django and react compatible.
+
+
+Making the api restful
+    - A restful version of this api is like
+    - /notes/ GET request - get notes
+    - /notes/ POST - create note
+        - instead of /notes/new
+    - /notes/<id> GET - get a single note
+    - /notes/<id> PUT - update a note
+        - instead of /notes/update
+    - /notes/<id> DELETE - delete a note
+        - instead of /notes/delete
+
+    2 endpoints and 5 routes
+    /notes/ GET request - get notes
+    /notes/ POST
+    /notes/<id> GET
+    /notes/<id> PUT
+    /notes/<id> DELETE
+
+    Step by step:
+    - create a utils.py on api folder
+    - set the createnote and getNotes function on utils.py and export it to views.
+    - Then set getNotes as
+        if request.method == 'GET':
+            # or utils.py getNotes()
+            notes = Note.objects.get(id=pk)
+            serializer = NoteSerializer(notes, many=False) # Have to serialize and jsonify these python Note objects
+                                                          # Only 1 so many = false
+            return Response(serializer.data) # Much like a json, have to .data
+
+        if request.method == 'POST':
+            # or utils.py createNote()
+            data = request.data  # Take the data
+            note = Note.objects.create(  # Create the note
+                body=data['body']
+            )
+            serializer = NoteSerializer(note, many=False)  # serialize it
+            return Response(serializer.data)  # return to frontend as json
+    -   edit the @api_view(['GET', 'POST']) from views.
+    - Remove the note/new route on urls.py
+    - Change the create note route on frontend
+
+How to handle csrf error
+    - on the relevant page, add let CSRF = document.cookie.slice(10)
+    - set fetch headers as:
+        headers : {
+            'Content-Type': 'application/json',
+              "X-CSRFToken": CSRF,
+          },

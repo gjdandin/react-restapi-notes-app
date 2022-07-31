@@ -1,0 +1,4 @@
+Notes app with react frontend and Sql backend
+1. Add auth system
+2. Sessions
+3. With enough time, perhaps påminnelser as well with email/sms notification
